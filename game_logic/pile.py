@@ -6,6 +6,7 @@ from utils.constants import (
 )
 
 class Pile:
+    """Bazowa klasa stosu kart."""
     def __init__(self):
         self.cards: List[Card] = []
 
@@ -21,6 +22,10 @@ class Pile:
         return None
 
     def remove_cards_from_top(self, num_cards: int) -> List[Card]:
+        """
+        Usuwa i zwraca num_cards kart z top stosu.
+        Zwraca pustą listę, jeśli nie ma wystarczającej liczby kart.
+        """
         if len(self.cards) >= num_cards > 0:
             removed = self.cards[-num_cards:]
             self.cards = self.cards[:-num_cards]
@@ -62,7 +67,7 @@ class StockPile(Pile):
 
 class WastePile(Pile):
     def get_display_cards(self, difficulty: str) -> List[Card]:
-        """Returns cards to display based on difficulty (top 1 or top 3)."""
+        """Zwraca karty do wyświetlenia w zależności od poziomu trudności (top 1 lub 3 top)."""
         if self.is_empty():
             return []
         if difficulty == DIFFICULTY_HARD:
@@ -71,7 +76,7 @@ class WastePile(Pile):
             return self.cards[-1:] 
 
     def get_playable_card(self) -> Optional[Card]:
-        """In both easy and hard, only the actual top card of waste is playable."""
+        """W trybach łatwym i trudnym można zagrywać tylko wierzchnią kartę z (Waste)."""
         return self.peek_top_card()
 
     def __str__(self) -> str:
@@ -80,6 +85,7 @@ class WastePile(Pile):
         return str(self.peek_top_card())
 
 class FoundationPile(Pile):
+    """Stos fundamentowy – budowany rosnąco w kolorze od Asa."""
     def __init__(self):
         super().__init__()
         self.suit_allowed: Optional[Suit] = None
@@ -129,7 +135,7 @@ class TableauPile(Pile):
                     first_card_to_add.rank.value == top_pile_card.rank.value - 1)
 
     def flip_top_card_if_needed(self) -> bool:
-        """Flips the top card if it's face-down. Returns True if a flip occurred."""
+        """Odsłania wierzchnią kartę, jeśli jest zakryta. Zwraca True, jeśli doszło do odsłonięcia."""
         top_card = self.peek_top_card()
         if top_card and not top_card.face_up:
             top_card.flip()
@@ -137,7 +143,7 @@ class TableauPile(Pile):
         return False
 
     def get_face_up_cards(self) -> List[Card]:
-        """Returns the list of face-up cards from the top of the pile."""
+        """Zwraca listę odkrytych kart z top stosu."""
         face_up_stack = []
         for card in reversed(self.cards):
             if card.face_up:
@@ -150,3 +156,4 @@ class TableauPile(Pile):
         if self.is_empty():
             return EMPTY_PILE_STR
         return ' '.join(str(c) for c in self.cards)
+    

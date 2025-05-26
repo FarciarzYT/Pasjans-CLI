@@ -45,7 +45,9 @@ class GameState:
                     self.tableau_piles[i].add_card(card)
         while not self.deck.is_empty():
             card = self.deck.deal()
-            if card: card.face_up = False; self.stock_pile.add_card(card)
+            if card:
+                card.face_up = False
+                self.stock_pile.add_card(card)
 
 
     def deal_from_stock(self) -> bool:
@@ -97,46 +99,102 @@ class GameState:
         raise ValueError(f"Invalid pile id: {pile_type}{index+1 if index is not None else ''}")
 
     def move_cards(self, from_pile_type: str, from_idx: Optional[int],
-                     to_pile_type: str, to_idx: Optional[int], num_cards_to_request: int = 1) -> Tuple[bool, str]:
-      
+                   to_pile_type: str, to_idx: Optional[int], num_cards_to_request: int = 1) -> Tuple[bool, str]:
+        """
+        Przenosi karty między stosami.
+        Zwraca (True, "Ruch wykonany.") lub (False, "Opis błędu").
+        """
         try:
             source_pile = self._get_pile_by_id(from_pile_type, from_idx)
             dest_pile = self._get_pile_by_id(to_pile_type, to_idx)
-        except ValueError as e: return False, str(e)
-        cards_to_move_actual_objects: List[Card] = []
-        if source_pile == self.waste_pile:
-            if num_cards_to_request != 1: return False, "Tylko 1 karta z Waste."
-            card = self.waste_pile.get_playable_card(); 
-            if card: cards_to_move_actual_objects = [card]
-        elif isinstance(source_pile, TableauPile):
-            if num_cards_to_request < 1: return False, "Liczba kart > 0."
-            potential_stack = source_pile.peek_cards_from_top(num_cards_to_request)
-            if len(potential_stack) == num_cards_to_request and all(c.face_up for c in potential_stack):
-                cards_to_move_actual_objects = potential_stack
-            else: return False, "Nie można przenieść (za mało/nieodkryte)."
-        elif isinstance(source_pile, FoundationPile):
-             if num_cards_to_request != 1: return False, "Tylko 1 karta z Fundamentu."
-             card = source_pile.peek_top_card(); 
-             if card: cards_to_move_actual_objects = [card]
-        else: return False, "Nieprawidłowy stos źródłowy."
-        if not cards_to_move_actual_objects: return False, "Brak kart do przeniesienia."
-        can_move = False
-        if isinstance(dest_pile, FoundationPile):
-            if len(cards_to_move_actual_objects) == 1 and dest_pile.can_add_card(cards_to_move_actual_objects[0]): can_move = True
-        elif isinstance(dest_pile, TableauPile):
-            if dest_pile.can_add_cards(cards_to_move_actual_objects): can_move = True
-        if not can_move: return False, "Nieprawidłowy ruch do celu."
-        action = {'type': 'move', 'from_pile_type': from_pile_type, 'from_idx': from_idx, 'to_pile_type': to_pile_type, 'to_idx': to_idx,
-                  'moved_cards_data': [c.__dict__ for c in cards_to_move_actual_objects], 'source_top_card_flipped_this_move': False}
-        if source_pile == self.waste_pile: source_pile.remove_top_card()
-        elif isinstance(source_pile, (TableauPile, FoundationPile)): source_pile.remove_cards_from_top(len(cards_to_move_actual_objects))
-        if isinstance(source_pile, TableauPile) and source_pile.flip_top_card_if_needed(): action['source_top_card_flipped_this_move'] = True
+        except ValueError as e:
+            return False, str(e)
+
+        # Pobierz karty do przeniesienia
+        cards_to_move_actual_objects: List[Card] = self._get_cards_to_move(source_pile, num_cards_to_request)
+        if isinstance(cards_to_move_actual_objects, str):
+            # Zwrócony string to komunikat o błędzie
+            return False, cards_to_move_actual_objects
+        if not cards_to_move_actual_objects:
+            return False, "Brak kart do przeniesienia."
+
+        # Sprawdź, czy ruch jest dozwolony
+        can_move, error_msg = self._can_move_to_dest(dest_pile, cards_to_move_actual_objects)
+        if not can_move:
+            return False, error_msg
+
+        # Wykonaj ruch
+        action = {
+            'type': 'move',
+            'from_pile_type': from_pile_type,
+            'from_idx': from_idx,
+            'to_pile_type': to_pile_type,
+            'to_idx': to_idx,
+            'moved_cards_data': [c.__dict__ for c in cards_to_move_actual_objects],
+            'source_top_card_flipped_this_move': False
+        }
+
+        self._remove_cards_from_source(source_pile, cards_to_move_actual_objects)
+        if isinstance(source_pile, TableauPile) and source_pile.flip_top_card_if_needed():
+            action['source_top_card_flipped_this_move'] = True
         dest_pile.add_cards(cards_to_move_actual_objects)
         if isinstance(dest_pile, FoundationPile) and len(dest_pile.cards) == 1 and cards_to_move_actual_objects[0].rank == Rank.ACE:
             dest_pile.suit_allowed = cards_to_move_actual_objects[0].suit
-        self._record_action(action); self.moves_count += 1
+        self._record_action(action)
+        self.moves_count += 1
         return True, "Ruch wykonany."
 
+    def _get_cards_to_move(self, source_pile, num_cards_to_request: int):
+        """
+        Zwraca listę kart do przeniesienia lub komunikat o błędzie (str).
+        """
+        if source_pile == self.waste_pile:
+            if num_cards_to_request != 1:
+                return "Tylko 1 karta z Waste."
+            card = self.waste_pile.get_playable_card()
+            return [card] if card else []
+        elif isinstance(source_pile, TableauPile):
+            if num_cards_to_request < 1:
+                return "Liczba kart > 0."
+            potential_stack = source_pile.peek_cards_from_top(num_cards_to_request)
+            if len(potential_stack) == num_cards_to_request and all(c.face_up for c in potential_stack):
+                return potential_stack
+            else:
+                return "Nie można przenieść (za mało/nieodkryte)."
+        elif isinstance(source_pile, FoundationPile):
+            if num_cards_to_request != 1:
+                return "Tylko 1 karta z Fundamentu."
+            card = source_pile.peek_top_card()
+            return [card] if card else []
+        else:
+            return "Nieprawidłowy stos źródłowy."
+
+    def _can_move_to_dest(self, dest_pile, cards_to_move_actual_objects: List[Card]) -> Tuple[bool, str]:
+        """
+        Sprawdza, czy można przenieść karty na docelowy stos.
+        Zwraca (True, "") lub (False, "Opis błędu").
+        """
+        if isinstance(dest_pile, FoundationPile):
+            if len(cards_to_move_actual_objects) == 1 and dest_pile.can_add_card(cards_to_move_actual_objects[0]):
+                return True, ""
+            else:
+                return False, "Nieprawidłowy ruch do celu."
+        elif isinstance(dest_pile, TableauPile):
+            if dest_pile.can_add_cards(cards_to_move_actual_objects):
+                return True, ""
+            else:
+                return False, "Nieprawidłowy ruch do celu."
+        else:
+            return False, "Nieprawidłowy stos docelowy."
+
+    def _remove_cards_from_source(self, source_pile, cards_to_move_actual_objects: List[Card]):
+        """
+        Usuwa karty ze źródłowego stosu.
+        """
+        if source_pile == self.waste_pile:
+            source_pile.remove_top_card()
+        elif isinstance(source_pile, (TableauPile, FoundationPile)):
+            source_pile.remove_cards_from_top(len(cards_to_move_actual_objects))
 
     def _record_action(self, action_details: Dict[str, Any]):
         
@@ -150,39 +208,59 @@ class GameState:
         return Card(actual_suit, actual_rank, card_data['face_up'])
 
     def undo_last_move(self) -> bool:
-        if not self.move_history: return False
+        """
+        Cofa ostatni ruch gracza. Zwraca True jeśli cofnięcie się powiodło, False w przeciwnym wypadku.
+        """
+        if not self.move_history:
+            return False
         last_action = self.move_history.pop()
         action_type = last_action['type']
 
         if action_type == 'draw':
-            cards_drawn_data = last_action['cards_drawn_data']
-            for _ in range(len(cards_drawn_data)): self.waste_pile.remove_top_card()
-            for card_data_dict in reversed(cards_drawn_data):
-                self.stock_pile.add_card(self._recreate_card_from_data(card_data_dict))
-        elif action_type == 'reshuffle_stock': 
-            self.stock_pile.get_all_cards_and_clear() 
-            reshuffled_waste_data_list = last_action['reshuffled_waste_data']
-            if reshuffled_waste_data_list:
-                for card_data_dict in reshuffled_waste_data_list: 
-                    self.waste_pile.add_card(self._recreate_card_from_data(card_data_dict))
+            self._undo_draw_action(last_action)
+        elif action_type == 'reshuffle_stock':
+            self._undo_reshuffle_action(last_action)
         elif action_type == 'move':
-        
-            from_pile_type, from_idx = last_action['from_pile_type'], last_action['from_idx']
-            to_pile_type, to_idx = last_action['to_pile_type'], last_action['to_idx']
-            moved_cards_data_list = last_action['moved_cards_data']
-            source_card_was_flipped = last_action['source_top_card_flipped_this_move']
-            source_pile = self._get_pile_by_id(from_pile_type, from_idx)
-            dest_pile = self._get_pile_by_id(to_pile_type, to_idx)
-            cards_to_restore = [self._recreate_card_from_data(cd) for cd in moved_cards_data_list]
-            dest_pile.remove_cards_from_top(len(cards_to_restore))
-            if isinstance(dest_pile, FoundationPile) and dest_pile.is_empty(): dest_pile.suit_allowed = None
-            if isinstance(source_pile, TableauPile) and source_card_was_flipped:
-                top_card = source_pile.peek_top_card()
-                if top_card and top_card.face_up: top_card.face_up = False
-            source_pile.add_cards(cards_to_restore)
-        
+            self._undo_move_action(last_action)
+        else:
+            return False
+
         self.moves_count = max(0, self.moves_count - 1)
         return True
+
+    def _undo_draw_action(self, last_action: Dict[str, Any]):
+        """Cofa akcję dobierania kart ze stocka."""
+        cards_drawn_data = last_action['cards_drawn_data']
+        for _ in range(len(cards_drawn_data)):
+            self.waste_pile.remove_top_card()
+        for card_data_dict in reversed(cards_drawn_data):
+            self.stock_pile.add_card(self._recreate_card_from_data(card_data_dict))
+
+    def _undo_reshuffle_action(self, last_action: Dict[str, Any]):
+        """Cofa akcję przetasowania stosu odpadów do stocka."""
+        self.stock_pile.get_all_cards_and_clear()
+        reshuffled_waste_data_list = last_action['reshuffled_waste_data']
+        if reshuffled_waste_data_list:
+            for card_data_dict in reshuffled_waste_data_list:
+                self.waste_pile.add_card(self._recreate_card_from_data(card_data_dict))
+
+    def _undo_move_action(self, last_action: Dict[str, Any]):
+        """Cofa akcję przeniesienia kart między stosami."""
+        from_pile_type, from_idx = last_action['from_pile_type'], last_action['from_idx']
+        to_pile_type, to_idx = last_action['to_pile_type'], last_action['to_idx']
+        moved_cards_data_list = last_action['moved_cards_data']
+        source_card_was_flipped = last_action['source_top_card_flipped_this_move']
+        source_pile = self._get_pile_by_id(from_pile_type, from_idx)
+        dest_pile = self._get_pile_by_id(to_pile_type, to_idx)
+        cards_to_restore = [self._recreate_card_from_data(cd) for cd in moved_cards_data_list]
+        dest_pile.remove_cards_from_top(len(cards_to_restore))
+        if isinstance(dest_pile, FoundationPile) and dest_pile.is_empty():
+            dest_pile.suit_allowed = None
+        if isinstance(source_pile, TableauPile) and source_card_was_flipped:
+            top_card = source_pile.peek_top_card()
+            if top_card and top_card.face_up:
+                top_card.face_up = False
+        source_pile.add_cards(cards_to_restore)
 
     def check_win_condition(self) -> bool:
         return sum(len(p) for p in self.foundation_piles) == 52
@@ -198,31 +276,55 @@ class GameState:
         return dest_tableau_pile.can_add_cards(stack_to_move)
 
     def has_possible_moves(self) -> bool:
-        if not self.stock_pile.is_empty(): return True 
+        """
+        Sprawdza, czy gracz ma jakiekolwiek możliwe ruchy do wykonania.
+        """
+        if not self.stock_pile.is_empty():
+            return True
         # Jeśli stock jest pusty, ale można przetasować waste, to też jest "ruch" (draw spowoduje reshuffle)
         if self.stock_pile.is_empty() and \
            self.current_settings.get("reshuffle_waste_on_empty_stock", True) and \
            not self.waste_pile.is_empty():
             return True
 
+        if self._waste_has_possible_moves():
+            return True
+        if self._tableau_has_possible_moves():
+            return True
+        return False
+
+    def _waste_has_possible_moves(self) -> bool:
+        """Sprawdza, czy karta z waste może być zagrana na foundation lub tableau."""
         waste_card = self.waste_pile.get_playable_card()
         if waste_card:
             for f_pile in self.foundation_piles:
-                if self.can_move_card_to_pile(waste_card, f_pile): return True
+                if self.can_move_card_to_pile(waste_card, f_pile):
+                    return True
             for t_pile in self.tableau_piles:
-                if self.can_move_card_to_pile(waste_card, t_pile): return True
+                if self.can_move_card_to_pile(waste_card, t_pile):
+                    return True
+        return False
+
+    def _tableau_has_possible_moves(self) -> bool:
+        """Sprawdza, czy na tableau są możliwe ruchy (na foundation lub inne tableau)."""
         for i, t_pile_src in enumerate(self.tableau_piles):
             if not t_pile_src.is_empty():
                 top_tableau_card = t_pile_src.peek_top_card()
                 if top_tableau_card and top_tableau_card.face_up:
                     for f_pile_dest in self.foundation_piles:
-                        if self.can_move_card_to_pile(top_tableau_card, f_pile_dest): return True
+                        if self.can_move_card_to_pile(top_tableau_card, f_pile_dest):
+                            return True
             face_up_stack_on_src = t_pile_src.get_face_up_cards()
-            if not face_up_stack_on_src: continue
+            if not face_up_stack_on_src:
+                continue
             for k in range(len(face_up_stack_on_src)):
                 stack_to_check = face_up_stack_on_src[k:]
-                if not stack_to_check: continue
+                if not stack_to_check:
+                    continue
                 for j, t_pile_dest in enumerate(self.tableau_piles):
-                    if i == j: continue
-                    if self.can_move_stack_to_tableau(stack_to_check, t_pile_dest): return True
+                    if i == j:
+                        continue
+                    if self.can_move_stack_to_tableau(stack_to_check, t_pile_dest):
+                        return True
         return False
+    

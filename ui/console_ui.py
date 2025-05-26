@@ -341,3 +341,4 @@ Przegrana: Gra jest przegrana, gdy Talia Rezerwowa jest pusta, opcja przetasowan
             if pile_type_char == PILE_TABLEAU and not (0 <= index < NUM_TABLEAU_PILES): return None, None
             return pile_type_char, index
         except ValueError: return None, None
+        

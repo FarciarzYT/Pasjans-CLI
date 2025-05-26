@@ -14,13 +14,13 @@ def load_high_scores() -> list[int]:
         return []
 
 def save_high_score(moves: int):
+    """Dodaje nowy wynik i zapisuje najlepsze wyniki do pliku."""
     scores = load_high_scores()
     scores.append(moves)
-    scores = sorted(scores) 
-    
+    scores = sorted(scores)[:MAX_SCORES_DISPLAYED]
     try:
         with open(HIGH_SCORE_FILE, 'w') as f:
-            for score in scores: 
+            for score in scores:
                 f.write(f"{score}\n")
     except Exception as e:
         print(f"Warning: Could not save high score: {e}")
@@ -30,7 +30,7 @@ def get_formatted_high_scores() -> str:
     if not scores:
         return "No high scores yet."
     
-    lines = ["Top Scores (fewer moves are better):"]
+    lines = ["Najlepsze Wyniki:"]
     for i, score in enumerate(scores[:MAX_SCORES_DISPLAYED], 1):
         lines.append(f"{i}. {score} moves")
     return "\n".join(lines)

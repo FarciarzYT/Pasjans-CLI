@@ -9,6 +9,7 @@ import sys
 current_game_settings: dict = {}
 
 def run_game_loop(ui: ConsoleUI, settings: dict):
+    """Główna pętla gry. Obsługuje logikę rozgrywki i wejście użytkownika."""
     global current_game_settings
     difficulty = settings.get("difficulty", game_settings.DEFAULT_DIFFICULTY)
     game_state = GameState(difficulty, settings) 
@@ -148,9 +149,11 @@ def run_game_loop(ui: ConsoleUI, settings: dict):
         # Czyszczenie i wyświetlanie komunikatów po przetworzeniu komendy
         clear_console() 
         if error_message:
-            ui.display_message(error_message, is_error=True); input("Naciśnij Enter...") 
+            ui.display_message(error_message, is_error=True)
+            input("Naciśnij Enter...")
         elif action_performed_message:
-            pass
+            ui.display_message(action_performed_message)
+            input("Naciśnij Enter...")
 
 
 def show_settings_menu(ui: ConsoleUI):
@@ -254,3 +257,4 @@ def main_menu_loop():
 
 if __name__ == "__main__":
     main_menu_loop()
+    

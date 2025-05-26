@@ -41,6 +41,7 @@ def load_settings() -> dict:
         return default_settings.copy()
 
 def save_settings(settings_to_save: dict):
+    """Zapisuje ustawienia do pliku JSON. Zwraca True jeśli się powiodło, False w przeciwnym wypadku."""
     try:
         with open(SETTINGS_FILE, 'w') as f:
             json.dump(settings_to_save, f, indent=4)

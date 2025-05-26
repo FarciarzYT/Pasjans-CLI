@@ -1,6 +1,7 @@
 from utils.constants import Suit, Rank, FACE_DOWN_CARD_STR
 
 class Card:
+    """Reprezentuje pojedynczą kartę do gry w pasjansa."""
     def __init__(self, suit: Suit, rank: Rank, face_up: bool = False):
         if not isinstance(suit, Suit):
             raise TypeError(f"suit must be an instance of Suit, got {type(suit)}")
@@ -19,6 +20,7 @@ class Card:
         return self.rank.value
 
     def flip(self):
+        """Odwraca stan karty (face up/down)."""
         self.face_up = not self.face_up
 
     def __str__(self):
@@ -38,9 +40,8 @@ class Card:
         return self.suit == other.suit and self.rank == other.rank and self.face_up == other.face_up
 
     def is_next_rank_for_tableau(self, other_card: 'Card') -> bool:
-        """Checks if this card's rank is one less than other_card's rank."""
         return self.rank.value == other_card.rank.value - 1
 
     def is_next_rank_for_foundation(self, other_card: 'Card') -> bool:
-        """Checks if this card's rank is one more than other_card's rank."""
         return self.rank.value == other_card.rank.value + 1
+    

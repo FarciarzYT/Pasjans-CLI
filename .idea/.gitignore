@@ -1,0 +1,28 @@
+# Pliki generowane przez Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+
+.venv/
+venv/
+ENV/
+env/
+pip-freeze.txt 
+
+
+.DS_Store  # macOS
+Thumbs.db  # Windows
+desktop.ini # Windows
+
+.idea/     # IntelliJ IDEA, PyCharm
+.vscode/   # Visual Studio Code
+*.sublime-project
+*.sublime-workspace
+
+*.log
+logs/
+
+# Zależności instalowane lokalnie (jeśli ktoś by tak robił zamiast venv)
+# site-packages/

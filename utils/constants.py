@@ -1,6 +1,7 @@
 from enum import Enum
 
 class Suit(Enum):
+    """Reprezentuje kolor karty (Hearts, Diamonds, Spades, Clubs)."""
     HEARTS = "♥"
     DIAMONDS = "♦"
     SPADES = "♠"
@@ -8,12 +9,14 @@ class Suit(Enum):
 
     @property
     def color(self):
+        """Zwraca kolor ('RED' lub 'BLACK') dla danego koloru karty."""
         if self in (Suit.HEARTS, Suit.DIAMONDS):
             return "RED"
         else:
             return "BLACK"
 
 class Rank(Enum):
+    """Reprezentuje rangę karty (A, 2, ..., K)."""
     ACE = ("A", 1)
     TWO = ("2", 2)
     THREE = ("3", 3)
