@@ -88,6 +88,7 @@ Gra jest wygrana, gdy wszystkie karty zostaną poprawnie umieszczone na Stosach 
 Gra jest przegrana, jeśli Talia Rezerwowa jest pusta (a opcja przetasowywania jest wyłączona lub Stos Odkrytych również jest pusty) i nie ma już żadnych możliwych legalnych ruchów na planszy. Wyświetlony zostanie komunikat o zakończeniu gry.
 
 ## 4. Struktura Projektu
+```
 Pasjans/
 ├── main.py # Główny skrypt aplikacji, pętla menu, pętla gry
 ├── game_logic/
@@ -109,7 +110,7 @@ Pasjans/
 ├── requirements.txt # Zależności Python (np. colorama)
 └── settings.json # Przechowuje konfigurowalne przez użytkownika ustawienia gry
 └── solitaire_high_scores.txt # Przechowuje najlepsze wyniki (tworzony automatycznie)
-
+```
 ## 5. Opis Kluczowych Klas, Modułów i Funkcji
 
 ### `main.py`
