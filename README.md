@@ -16,9 +16,9 @@ Konsolowa implementacja klasycznej gry karcianej Pasjans (Klondike), stworzona j
         pip install -r requirements.txt
         ```
     *   Jeżeli korzytasz z Arch linux to
-      ```bash
+        ```bash
          sudo pacman -S python-colorama
-      ```
+        ```
 
 3.  **Uruchamianie Gry:**
     *   Będąc w katalogu `Pasjans`, uruchom:
