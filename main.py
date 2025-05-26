@@ -126,8 +126,10 @@ def run_game_loop(ui: ConsoleUI, settings: dict):
                             success, message = game_state.move_cards(
                                 source_pile_type, source_idx, dest_pile_type, dest_idx, num_cards_to_move
                             )
-                            if success: action_performed_message = message
-                            else: error_message = message
+                            if success:
+                                action_performed_message = None
+                            else:
+                                error_message = message
             elif command in ['help', 'h']:
                 clear_console()
                 print("\nKomendy dostępne w trakcie gry:")
@@ -151,9 +153,9 @@ def run_game_loop(ui: ConsoleUI, settings: dict):
         if error_message:
             ui.display_message(error_message, is_error=True)
             input("Naciśnij Enter...")
-        elif action_performed_message:
-            ui.display_message(action_performed_message)
-            input("Naciśnij Enter...")
+        # else:
+        #     ui.display_message(action_performed_message)
+        #     input("Naciśnij Enter...")
 
 
 def show_settings_menu(ui: ConsoleUI):
