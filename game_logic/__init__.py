@@ -1,0 +1,1 @@
+# Ten plik może być pusty. Oznacza to, że 'game_logic' jest pakietem Pythona.

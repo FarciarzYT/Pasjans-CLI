@@ -1,0 +1,8 @@
+{
+    "difficulty": "easy",
+    "card_style": "minimal",
+    "theme": "dark",
+    "timer_enabled": true,
+    "undo_enabled": true,
+    "reshuffle_waste_on_empty_stock": true
+}
